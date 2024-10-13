@@ -6,7 +6,7 @@
           <h1>Accounts</h1>
           <hr />
           <br />
-          <!-- Allert Message -->
+          <!-- Alert Message -->
           <b-alert v-if="showMessage" variant="success" show>{{
             message
           }}</b-alert>
@@ -32,7 +32,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="account in accounts" :key="account.id">
+              <tr v-for="account in accounts" :key="account.id" @click="handleAccountClick(account)">
                 <td>{{ account.name }}</td>
                 <td>{{ account.account_number }}</td>
                 <td>{{ account.balance }}</td>
@@ -105,13 +105,67 @@
               id="form-currency-input"
               type="text"
               v-model="createAccountForm.currency"
+              :state="currencyState"
               placeholder="$ or €"
+              @input="currencyTouched = true"
+              required
+            >
+            </b-form-input>
+            <b-form-invalid-feedback v-if="currencyShowError && !currencyValid">
+                Currency must be "$" or "€".
+            </b-form-invalid-feedback>
+          </b-form-group>
+
+          <b-form-group
+            id="form-country-group"
+            label="Country:"
+            label-for="form-country-input"
+          >
+            <b-form-input
+              id="form-country-input"
+              type="text"
+              v-model="createAccountForm.country"
+              placeholder="Country"
               required
             >
             </b-form-input>
           </b-form-group>
 
-          <b-button type="submit" variant="outline-info">Submit</b-button>
+          <b-form-group
+            id="form-type-group"
+            label="Account Type:"
+            label-for="form-type-input"
+          >
+            <b-form-select 
+              v-model="createAccountForm.type" 
+              :options="createAccountForm.options"
+              required
+            >
+            </b-form-select>
+          </b-form-group>
+
+          <b-form-group
+            id="form-email-group"
+            label="Email:"
+            label-for="form-email-input"
+          >
+            <b-form-input
+              id="form-email-input"
+              type="text"
+              v-model="createAccountForm.email"
+              placeholder="Email"
+              :state="emailState"
+              @input="emailTouched = true"
+              required
+            >
+            </b-form-input>
+            <b-form-invalid-feedback v-if="emailShowError && !emailValid">
+                Please enter a valid email format.
+            </b-form-invalid-feedback>
+          </b-form-group>
+
+
+          <b-button type="submit" variant="outline-info"> Submit</b-button>
         </b-form>
       </b-modal>
       <!-- End of Modal for Create Account-->
@@ -142,6 +196,20 @@
         </b-form>
       </b-modal>
       <!-- End of Modal for Edit Account-->
+      <!-- Start of Modal for Display Account-->
+      <b-modal ref="accountDetailsModal" id="account-details-modal" title="Account Details" hide-footer>
+      <div v-if="selectedAccount">
+        <p><strong>Account Name:</strong> {{ selectedAccount.name }}</p>
+        <p><strong>Account Number:</strong> {{ selectedAccount.account_number }}</p>
+        <p><strong>Account Balance:</strong> {{ selectedAccount.balance }}</p>
+        <p><strong>Currency:</strong> {{ selectedAccount.currency }}</p>
+        <p><strong>Status:</strong> {{ selectedAccount.status }}</p>
+        <p><strong>Country:</strong> {{ selectedAccount.country }}</p>
+        <p><strong>Email:</strong> {{ selectedAccount.email }}</p>
+        <p><strong>Account Type:</strong> {{ selectedAccount.type }}</p>
+      </div>
+    </b-modal>
+    <!-- End of Modal for Display Account-->
     </div>
   </div>
 </template>
@@ -153,9 +221,18 @@ export default {
   data() {
     return {
       accounts: [],
+      selectedAccount: null,
       createAccountForm: {
         name: "",
         currency: "",
+        country: "",
+        type: null,
+        options: [
+          { value: null, text: 'Please select an option' },
+          { value: 'Checking', text: 'Checking' },
+          { value: 'Savings', text: 'Savings' },
+        ],
+        email: "",
       },
       editAccountForm: {
         id: "",
@@ -163,9 +240,36 @@ export default {
       },
       showMessage: false,
       message: "",
+      currencyShowError: false,
+      currencyTouched: false,
+      emailError: false,
+      emailTouched: false,
     };
   },
+  computed: {
+    currencyValid() {
+      // Checks if the input is exactly "$" or "€"
+      return (this.createAccountForm.currency === "$" || this.createAccountForm.currency === "€");
+    },
+    currencyState() {
+      // Checks if the input is exactly "$" or "€"
+      return this.currencyTouched || this.currencyShowError ? this.currencyValid : null;
+    },
+    emailValid() {
+      // Email regex for basic validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(this.createAccountForm.email);
+    },
+    emailState() {
+      // Checks if the input is exactly "$" or "€"
+      return this.emailTouched || this.emailShowError ? this.emailValid : null;
+    },
+  },
   methods: {
+    handleAccountClick(account){
+      this.selectedAccount = account
+      this.$refs.accountDetailsModal.show()
+    },
     /***************************************************
      * RESTful requests
      ***************************************************/
@@ -257,6 +361,9 @@ export default {
     initForm() {
       this.createAccountForm.name = "";
       this.createAccountForm.currency = "";
+      this.createAccountForm.country = "";
+      this.createAccountForm.type = "";
+      this.createAccountForm.email = "";
       this.editAccountForm.id = "";
       this.editAccountForm.name = "";
     },
@@ -264,13 +371,32 @@ export default {
     // Handle submit event for create account
     onSubmit(e) {
       e.preventDefault(); //prevent default form submit form the browser
-      this.$refs.addAccountModal.hide(); //hide the modal when submitted
-      const payload = {
-        name: this.createAccountForm.name,
-        currency: this.createAccountForm.currency,
-      };
-      this.RESTcreateAccount(payload);
-      this.initForm();
+
+      this.emailShowError = true;
+      this.currencyShowError = true;
+
+      if (this.currencyValid){
+        this.currencyShowError = false; // Reset error flag after successful submission
+        this.currencyTouched = false;
+      }
+      if (this.emailValid){
+        this.emailShowError = false; // Reset error flag after successful submission
+        this.emailTouched = false;
+      }
+
+      if (this.currencyValid && this.emailValid){
+        this.$refs.addAccountModal.hide(); //hide the modal when submitted
+        const payload = {
+          name: this.createAccountForm.name,
+          currency: this.createAccountForm.currency,
+          country: this.createAccountForm.country,
+          type: this.createAccountForm.type,
+          email: this.createAccountForm.email
+        };
+        this.RESTcreateAccount(payload);
+        this.initForm();
+      }
+
     },
 
     // Handle submit event for edit account
