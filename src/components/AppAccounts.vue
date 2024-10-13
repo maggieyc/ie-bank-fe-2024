@@ -32,12 +32,12 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="account in accounts" :key="account.id" @click="handleAccountClick(account)">
-                <td>{{ account.name }}</td>
-                <td>{{ account.account_number }}</td>
-                <td>{{ account.balance }}</td>
-                <td>{{ account.currency }}</td>
-                <td>
+              <tr v-for="account in accounts" :key="account.id">
+                <td @click="handleAccountClick(account)">{{ account.name }}</td>
+                <td @click="handleAccountClick(account)">{{ account.account_number }}</td>
+                <td @click="handleAccountClick(account)">{{ account.balance }}</td>
+                <td @click="handleAccountClick(account)">{{ account.currency }}</td>
+                <td @click="handleAccountClick(account)">
                   <span
                     v-if="account.status == 'Active'"
                     class="badge badge-success"
