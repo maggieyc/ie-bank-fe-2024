@@ -19,6 +19,7 @@
           >
             Create Account
           </button>
+
           <br /><br />
           <table class="table table-hover">
             <thead>
@@ -60,7 +61,7 @@
                     <button
                       type="button"
                       class="btn btn-danger btn-sm"
-                      @click="deleteAccount(account)"
+                      @click="confirmDeleteAccount(account)"
                     >
                       Delete
                     </button>
@@ -69,6 +70,13 @@
               </tr>
             </tbody>
           </table>
+
+          <router-link 
+            to="/" 
+            class="btn btn-primary btn-sm">
+            Back to Homepage
+          </router-link>
+
           <footer class="text-center">
             Copyright &copy; All Rights Reserved.
           </footer>
@@ -192,10 +200,45 @@
             >
             </b-form-input>
           </b-form-group>
+
+          <b-form-group
+            id="form-edit-email-group"
+            label="Email:"
+            label-for="form-edit-email-input"
+          >
+            <b-form-input
+              id="form-edit-email-input"
+              type="text"
+              v-model="editAccountForm.email"
+              placeholder="Email"
+              required
+            >
+            </b-form-input>
+          </b-form-group>
           <b-button type="submit" variant="outline-info">Update</b-button>
         </b-form>
       </b-modal>
       <!-- End of Modal for Edit Account-->
+
+      <!-- Start of Modal for Delete Account-->
+      <b-modal
+        ref="deleteAccountModal"
+        id="delete-account-modal"
+        title="Delete account"
+        hide-backdrop
+        hide-footer
+      >
+        Are you sure you want to delete the account?
+      <button
+        type="button"
+        class="btn btn-danger btn-sm"
+        @click="deleteAccount(accountToDelete)"
+      >
+        Yes
+      </button>
+      </b-modal>
+      <!-- End of Modal for Delete Account-->
+
       <!-- Start of Modal for Display Account-->
       <b-modal ref="accountDetailsModal" id="account-details-modal" title="Account Details" hide-footer>
       <div v-if="selectedAccount">
@@ -233,10 +276,12 @@ export default {
           { value: 'Savings', text: 'Savings' },
         ],
         email: "",
+        accountToDelete: null
       },
       editAccountForm: {
         id: "",
         name: "",
+        email: ""
       },
       showMessage: false,
       message: "",
@@ -366,6 +411,7 @@ export default {
       this.createAccountForm.email = "";
       this.editAccountForm.id = "";
       this.editAccountForm.name = "";
+      this.editAccountForm.email = "";
     },
 
     // Handle submit event for create account
@@ -376,16 +422,16 @@ export default {
       this.currencyShowError = true;
 
       if (this.currencyValid){
-        this.currencyShowError = false; // Reset error flag after successful submission
+        this.currencyShowError = false;
         this.currencyTouched = false;
       }
       if (this.emailValid){
-        this.emailShowError = false; // Reset error flag after successful submission
+        this.emailShowError = false;
         this.emailTouched = false;
       }
 
       if (this.currencyValid && this.emailValid){
-        this.$refs.addAccountModal.hide(); //hide the modal when submitted
+        this.$refs.addAccountModal.hide(); 
         const payload = {
           name: this.createAccountForm.name,
           currency: this.createAccountForm.currency,
@@ -401,10 +447,11 @@ export default {
 
     // Handle submit event for edit account
     onSubmitUpdate(e) {
-      e.preventDefault(); //prevent default form submit form the browser
-      this.$refs.editAccountModal.hide(); //hide the modal when submitted
+      e.preventDefault();
+      this.$refs.editAccountModal.hide();
       const payload = {
         name: this.editAccountForm.name,
+        email:this.editAccountForm.email
       };
       this.RESTupdateAccount(payload, this.editAccountForm.id);
       this.initForm();
@@ -412,12 +459,19 @@ export default {
 
     // Handle edit button
     editAccount(account) {
-      this.editAccountForm = account;
+      this.editAccountForm = { ...account };
+    },
+
+    // Show modal confirmation before deleting
+    confirmDeleteAccount(account) {
+      this.accountToDelete = account; 
+      this.$refs.deleteAccountModal.show();
     },
 
     // Handle Delete button
     deleteAccount(account) {
       this.RESTdeleteAccount(account.id);
+      this.$refs.deleteAccountModal.hide();
     },
   },
 
